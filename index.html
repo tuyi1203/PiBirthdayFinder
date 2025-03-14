@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>圆周率太空探险</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pickadate.js/3.5.6/picker.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pickadate.js/3.5.6/picker.date.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pickadate.js/3.5.6/themes/default.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/pickadate.js/3.5.6/themes/default.date.css">
+    <style>
+        body {
+                font-family: Arial, sans-serif;
+                background: #0a0a23 url('stars.jpg') no-repeat center center fixed;
+                background-size: cover;
+                color: white;
+                text-align: center;
+                padding-top: 5vh;
+            }
+        h1 {
+            font-size: clamp(1.5rem, 4vw, 2.5rem);
+            text-shadow: 2px 2px 4px #000;
+        }
+        p {
+            font-size: clamp(0.8rem, 0.8rem, 0.8rem);
+        }
+        .selector-box {
+            margin: 2vh 0;
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+        }
+        .picker-input {
+            width: clamp(100px, 20vw, 150px);
+            padding: 1rem;
+            font-size: clamp(1rem, 2vw, 1.2rem);
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid #fff;
+            border-radius: 10px;
+            text-align: center;
+            min-height: 48px;
+            touch-action: manipulation;
+        }
+        button {
+            padding: 1rem 2rem;
+            font-size: clamp(1rem, 2vw, 1.2rem);
+            background-color: #ff4500;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 10px;
+            min-height: 48px;
+            min-width: 120px;
+            touch-action: manipulation;
+        }
+        button:disabled {
+            background-color: #888;
+            cursor: not-allowed;
+        }
+        button:hover:not(:disabled) {
+            background-color: #ff6347;
+        }
+        @media (hover: none) {
+            button:hover:not(:disabled) {
+                background-color: #ff4500;
+            }
+        }
+        #result {
+            margin-top: 3vh;
+            font-size: clamp(1.2rem, 3vw, 1.5rem);
+        }
+        #rocket {
+            display: none;
+            position: absolute;
+            bottom: clamp(1vh, 10px, 2vh);
+            left: 50%;
+            transform: translateX(-50%);
+            width: clamp(40px, 5vw, 70px);
+            transition: bottom 2s ease-in-out;
+            z-index: 10;
+        }
+        .picker__holder {
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            border: 1px solid #fff;
+        }
+        .picker__header {
+            background: #ff4500;
+        }
+        #moon-station {
+            width: 100%;
+            max-width: 80%;
+            position: relative;
+            margin-bottom: 20px;
+            filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.5));
+        }
+        #pi-sequence {
+            margin-top: 2vh;
+            font-size: clamp(0.9rem, 2vw, 1.2rem);
+            font-family: monospace;
+        }
+        .highlight-birthday {
+            font-size: clamp(1.2rem, 2.5vw, 1.5rem);
+            color: #ffeb3b;
+            font-weight: bold;
+        }
+        @media (max-width: 1200px) and (min-width: 600px) {
+            body {
+                padding-top: 3vh;
+            }
+            .selector-box {
+                flex-direction: column;
+                align-items: center;
+            }
+            .picker-input {
+                width: 50vw;
+            }
+            #moon-station {
+                max-width: 70%;
+            }
+            #rocket {
+                width: 6vw;
+            }
+        }
+    </style>
+</head>
+<body>
+    <img id="moon-station" src="moon_station2.png" alt="月球太空站">
+    <h1>欢迎来到圆周率宇宙太空站</h1>
+    <h3>窗外每颗星球都由数字构成</h3>
+    <p>让我们发射火箭，一起来寻找属于你的那颗数字星球吧！</p>
+    <p>据说你的生日数字就是启动火箭的密码哟</p>
+    <div class="selector-box">
+        <input type="text" id="birthday" class="picker-input" placeholder="请输入你的生日">
+    </div>
+    <button id="launchButton" onclick="launchRocket()">点火</button>
+    <div id="pi-sequence"></div>
+    <div id="result">开始准备！</div>
+    <img id="rocket" src="rocket.png" alt="火箭">
+
+    <script>
+        // 格式化数字，每三位加逗号
+        function formatNumber(num) {
+            return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        }
+
+        function isValidDate(dateString) {
+            const year = parseInt(dateString.slice(0, 4));
+            const month = parseInt(dateString.slice(4, 6));
+            const day = parseInt(dateString.slice(6, 8));
+            const date = new Date(year, month - 1, day);
+            return date.getFullYear() === year && date.getMonth() === month - 1 && date.getDate() === day;
+        }
+
+        async function launchRocket() {
+            const birthday = document.getElementById('birthday').value;
+            const resultDiv = document.getElementById('result');
+            const piSequenceDiv = document.getElementById('pi-sequence');
+            const rocket = document.getElementById('rocket');
+            const launchButton = document.getElementById('launchButton');
+
+            if (!birthday) {
+                resultDiv.innerHTML = "请先输入你的生日哦！";
+                return;
+            }
+            if (!isValidDate(birthday)) {
+                resultDiv.innerHTML = "这个生日不存在，请检查一下！";
+                return;
+            }
+
+            // 定义动态文字数组
+            const launchMessages = [
+                "宇航员正在穿宇航服...",
+                "宇航员正在为宇航猫准备猫粮...",
+                "地面人员正在装载固体燃料...",
+                "火箭设计师在画最后的涂鸦...",
+                "站长正在寻找太空牙刷...",
+                "太空站站长正在刷牙...",
+                "宇航猫咪正在舔毛...",
+                "火箭引擎正在预热...",
+                "宇航员在检查导航系统...",
+                "燃料罐旁边发现一只太空老鼠...",
+                "地面工作人员正在紧急驱赶老鼠...",
+                "宇航员正在调试太空自拍杆...",
+                "宇航猫咪在练习零重力跳跃...",
+                "地面控制中心正在泡咖啡...",
+                "太空站厨师在烤宇宙披萨...",
+                "宇航员在挑选飞行播放列表...",
+                "火箭尾翼被宇航猫咪抓了一下...",
+                "站长正在擦拭太空站窗户...",
+                "宇航员在给家人发发射前自拍...",
+                "火箭上的Wi-Fi信号有点弱...",
+                "宇航猫咪在偷吃宇航员的零食...",
+                "控制塔正在测试倒计时音效...",
+                "宇航员在练习发射时的微笑...",
+                "太空站狗狗在追自己的尾巴...",
+                "火箭喷口被站长拿来烤棉花糖...",
+                "宇航员在调整头盔上的小镜子...",
+                "地面团队在争论谁按发射键...",
+                "太空站保洁正在为宇航植物浇水...",
+                "宇航猫咪在检查爪子安全带...",
+                "火箭上的吉祥物被绑好了...",
+            ];
+            let messageIndex = 0;
+            resultDiv.innerHTML = launchMessages[messageIndex];
+            piSequenceDiv.innerHTML = "";
+            launchButton.disabled = true;
+
+            // 每2秒更新一次文字
+            const messageInterval = setInterval(() => {
+                messageIndex = (messageIndex + 1) % launchMessages.length;
+                resultDiv.innerHTML = launchMessages[messageIndex];
+            }, 2000);
+
+            try {
+                const response = await fetch('http://192.168.11.10:5000/search_pi', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ birthday: birthday })
+                });
+                const data = await response.json();
+
+                // 搜索完成后清除定时器
+                clearInterval(messageInterval);
+
+                // 搜索完成时触发火箭动画和结果显示
+                resultDiv.innerHTML = "火箭起飞！"; // 过渡提示
+                rocket.style.display = "block";
+                setTimeout(() => {
+                    rocket.style.bottom = "80%";
+                }, 100);
+
+                setTimeout(() => {
+                    if (data.position > 0) {
+                        const formattedPosition = formatNumber(data.position);
+                        resultDiv.innerHTML = `哇！你的生日出现在圆周率${formattedPosition}位！`;
+                        addFunFact(data.position);
+                        const piSequence = `3.14...${data.before}<span class="highlight-birthday">${birthday}</span>${data.after}`;
+                        piSequenceDiv.innerHTML = piSequence;
+                    } else {
+                        resultDiv.innerHTML = "你的数字星球太神秘了，可能藏在更深处！";
+                        piSequenceDiv.innerHTML = "";
+                    }
+                    rocket.style.display = "none";
+                    rocket.style.bottom = "10px";
+                    launchButton.disabled = false;
+                }, 2000);
+            } catch (error) {
+                clearInterval(messageInterval);
+                resultDiv.innerHTML = "寻找出错，请稍后重试！";
+                piSequenceDiv.innerHTML = "";
+                launchButton.disabled = false;
+                console.error(error);
+            }
+        }
+
+        function addFunFact(position) {
+            let fact;
+            if (position <= 1000000) { // 0 - 1百万
+                const facts = [
+                    "你的生日就在太空站门口，太显眼啦！",
+                    "你的数字星球是前排VIP，离发射台一步之遥！",
+                    "这么近，宇航猫都能闻到你的生日蛋糕！"
+                ];
+                fact = facts[Math.floor(Math.random() * facts.length)];
+            } else if (position <= 5000000) { // 1百万 - 5百万
+                const facts = [
+                    "你的生日藏在附近的小行星带，挺热闹的！",
+                    "离太空站不远，火箭轻轻一跳就到！",
+                    "宇航员说，你的星球就在他们的望远镜里！"
+                ];
+                fact = facts[Math.floor(Math.random() * facts.length)];
+            } else if (position <= 10000000) { // 5百万 - 1千万
+                const facts = [
+                    "你的生日到了月球轨道，宇航员挥手就能看见！",
+                    "这位置有点远，但还在太空站的Wi-Fi范围内！",
+                    "你的星球是个小卫星，绕着π转圈呢！"
+                ];
+                fact = facts[Math.floor(Math.random() * facts.length)];
+            } else if (position <= 50000000) { // 1千万 - 5千万
+                const facts = [
+                    "你的生日飞到了火星附近，红色星球欢迎你！",
+                    "火箭需要加点油才能到你的数字星球！",
+                    "宇航猫说，这地方适合开个太空派对！"
+                ];
+                fact = facts[Math.floor(Math.random() * facts.length)];
+            } else if (position <= 100000000) { // 5千万 - 1亿
+                const facts = [
+                    "你的生日进入了小行星带，太空站长都惊叹了！",
+                    "这位置有点偏远，火箭得开足马力！",
+                    "你的星球是个隐秘的太空宝藏，等着被发现！"
+                ];
+                fact = facts[Math.floor(Math.random() * facts.length)];
+            } else if (position <= 2000000000) { // 1亿 - 20亿
+                const facts = [
+                    "你的生日到了木星轨道，气态巨星都为你鼓掌！",
+                    "火箭飞了半程，才找到你的数字星球！",
+                    "宇航员说，这地方需要个太空导航灯！"
+                ];
+                fact = facts[Math.floor(Math.random() * facts.length)];
+            } else if (position <= 10000000000) { // 20亿 - 100亿
+                const facts = [
+                    "你的生日飞到了银河系边缘，太震撼了！",
+                    "这位置超远，宇航猫都得带氧气罐了！",
+                    "你的星球是个孤独的旅行者，漂浮在π的海洋里！"
+                ];
+                fact = facts[Math.floor(Math.random() * facts.length)];
+            } else if (position <= 25000000000) { // 100亿 - 250亿
+                const facts = [
+                    "你的生日到了宇宙深渊，火箭都快没油了！",
+                    "这地方太神秘，连太空站长都没去过！",
+                    "你的数字星球是π的终极秘密，超酷！"
+                ];
+                fact = facts[Math.floor(Math.random() * facts.length)];
+            } else { // 250亿之外
+                const facts = [
+                    "你的生日超出了π的已知宇宙，简直是传奇！",
+                    "火箭飞到这里，直接穿越到了另一个维度！",
+                    "宇航员说，你的星球可能是外星人的杰作！"
+                ];
+                fact = facts[Math.floor(Math.random() * facts.length)];
+            }
+            document.getElementById('result').innerHTML += `<br><small>${fact}</small>`;
+        }
+    </script>
+    <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'91f276566c91bcbf',t:'MTc0MTc3MzgxMi4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script>
+</body>
+</html>
